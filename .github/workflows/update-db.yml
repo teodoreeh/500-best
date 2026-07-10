@@ -1,0 +1,47 @@
+# .github/workflows/update-db.yml
+# Автообновление базы с GitHub раз в неделю — бесплатный «сервер по расписанию».
+# Тянет свежий топ-500 у bigbadraj; если задан секрет TMDB_API_KEY — до-обогащает постерами.
+# Коммитит только при изменениях. Cloudflare/GitHub Pages сами передеплоят по пушу.
+
+name: update-db
+on:
+  schedule:
+    - cron: '0 6 * * 1'   # каждый понедельник 06:00 UTC
+  workflow_dispatch: {}    # можно запускать вручную
+
+permissions:
+  contents: write
+
+jobs:
+  update:
+    runs-on: ubuntu-latest
+    env:
+      TMDB_API_KEY: ${{ secrets.TMDB_API_KEY }}   # пусто, если секрет не задан
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Fetch latest list
+        run: |
+          curl -sSL --fail \
+            https://raw.githubusercontent.com/bigbadraj/Letterboxd-List-JSONs/main/film_titles_letterboxds-top-500-films.json \
+            -o data/movies.json
+
+      - name: Setup Node
+        if: ${{ env.TMDB_API_KEY != '' }}
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Enrich posters (TMDB)
+        if: ${{ env.TMDB_API_KEY != '' }}
+        run: node scripts/enrich-posters.mjs
+
+      - name: Commit if changed
+        run: |
+          git config user.name  "db-bot"
+          git config user.email "db-bot@users.noreply.github.com"
+          git add data/movies.json
+          [ -f data/movies.enriched.json ] && git add data/movies.enriched.json
+          [ -d posters ] && git add posters
+          git diff --staged --quiet || git commit -m "chore: refresh movies database + posters"
+          git push
