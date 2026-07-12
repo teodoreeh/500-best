@@ -4,7 +4,7 @@
 //   • данные (movies*.json, живой список) — network-first с откатом в кэш
 //   • постеры TMDB и шрифты Google — stale-while-revalidate (быстро + обновляется в фоне)
 // Версию бампаем при изменениях, чтобы обновить кэш.
-const VERSION = 'v6';
+const VERSION = 'v7';
 const SHELL = `shell-${VERSION}`;
 const RUNTIME = `runtime-${VERSION}`;
 

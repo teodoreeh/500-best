@@ -63,7 +63,7 @@ body{background:var(--bg);color:var(--ink);font-family:var(--mono);overflow-x:hi
 /* ── ЭКРАН ───────────────────────────────────────────── */
 .screenWrap{grid-area:screen;position:relative;border:1px solid var(--line);border-radius:12px;
   background:radial-gradient(120% 130% at 50% 42%,var(--bg-3) 0%,var(--bg-2) 55%,#070A16 100%);
-  min-height:470px;overflow:hidden;
+  min-height:452px;overflow:hidden;
   box-shadow:inset 0 0 90px rgba(0,0,0,.55), 0 0 0 1px #05060E, 0 0 34px -18px var(--ph);
   transition:box-shadow .5s}
 .screenWrap::before,.screenWrap::after,.brk i,.brk b{content:'';position:absolute;width:22px;height:22px;
@@ -148,10 +148,10 @@ body{background:var(--bg);color:var(--ink);font-family:var(--mono);overflow-x:hi
 @keyframes ringA{0%{transform:translate(-50%,-50%) scale(.2);opacity:.9}100%{transform:translate(-50%,-50%) scale(6);opacity:0}}
 
 /* ── БОКОВАЯ РЕЙКА ───────────────────────────────────── */
-.rail{grid-area:rail;display:flex;flex-direction:column;gap:10px;min-width:0}
-.cell{border:1px solid var(--line);background:var(--bg-2);border-radius:8px;padding:10px 12px}
-.cell h4{font-size:9px;letter-spacing:2.5px;color:var(--dim);font-weight:700;margin-bottom:8px}
-.orb{position:relative;height:104px}
+.rail{grid-area:rail;display:flex;flex-direction:column;gap:8px;min-width:0}
+.cell{border:1px solid var(--line);background:var(--bg-2);border-radius:8px;padding:8px 11px}
+.cell h4{font-size:9px;letter-spacing:2.5px;color:var(--dim);font-weight:700;margin-bottom:6px}
+.orb{position:relative;height:66px}
 .orb svg{width:100%;height:100%}
 .orb .o{fill:none;stroke:var(--line)}
 .orb .o1{stroke-dasharray:3 4}
@@ -173,7 +173,7 @@ body.scanning .gO,body.scanning .gLat,body.scanning .gMer{stroke:var(--ph)}
 .seg3{display:flex;flex-direction:column;gap:5px}
 .seg3 button{font-family:var(--mono);font-size:10px;font-weight:700;letter-spacing:2px;
   color:var(--dim);background:var(--bg-3);border:1px solid var(--line);border-radius:6px;
-  padding:7px 8px;cursor:pointer;transition:.15s;text-align:left;display:flex;justify-content:space-between}
+  padding:5px 8px;cursor:pointer;transition:.15s;text-align:left;display:flex;justify-content:space-between}
 .seg3 button small{color:var(--dim);font-weight:400;letter-spacing:0}
 .seg3 button:hover{border-color:var(--dim)}
 .seg3 button.on{color:var(--ink);border-color:var(--cyan);box-shadow:0 0 10px -4px var(--cyan);background:#0E1836}
@@ -197,7 +197,7 @@ body.scanning .snr i:nth-child(4),body.scanning .snr i:nth-child(5){animation-du
 
 /* ── ОПЕРАТОР (пиксель-силуэт, реагирует на события) ── */
 .oper{--opc:var(--cyan);position:relative;display:flex;flex-direction:column;align-items:center}
-.opsvg{width:100%;max-width:118px;height:auto;display:block;image-rendering:pixelated;
+.opsvg{width:100%;max-width:64px;height:auto;display:block;image-rendering:pixelated;
   transition:transform .4s cubic-bezier(.2,.8,.3,1.2)}
 .opbob{animation:opbob 3.6s ease-in-out infinite}
 @keyframes opbob{0%,100%{transform:translateY(0)}50%{transform:translateY(-1.4px)}}
@@ -408,22 +408,26 @@ body.scanning .snr i:nth-child(4),body.scanning .snr i:nth-child(5){animation-du
 @media (max-width:760px){
   body{padding:10px}
   .console{gap:8px;grid-template-columns:1fr;grid-template-areas:"strip" "rail" "screen" "ctrl" "cred"}
-  .strip{padding:6px 10px;gap:10px}
-  .rail{flex-direction:row;gap:8px}
+  .strip{padding:9px 12px;row-gap:9px;column-gap:12px}
+  .strip .wm{font-size:10px;line-height:1.5}
+  .rail{flex-direction:row;gap:8px;align-items:stretch}
   .cell{flex:1;min-width:0;display:flex;flex-direction:column;padding:8px 9px}
   .cell h4{flex:none;font-size:8px;margin-bottom:5px}
-  .cell.logc,.cell.opc{display:none}
-  .orb{flex:1;height:auto;min-height:62px}
-  .snr{flex:1;height:auto;min-height:48px}
+  .cell.sigc{display:none}                 /* Сигнал прячем — его место занимает Оператор */
+  .orb{flex:1;height:auto;min-height:56px}
   .seg3{gap:4px}
   .seg3 button{font-size:9px;padding:4px 6px}
   .seg3 button small{display:none}
-  .screenWrap{min-height:clamp(400px,55dvh,560px)}
+  .opc .sh{display:none}
+  .opc h4{font-size:8px}
+  .opc .opsvg{max-width:60px}
+  .opc .opline{font-size:7px;letter-spacing:1px;margin-top:2px}
+  .screenWrap{min-height:clamp(440px,64dvh,620px)}
   /* бейдж над постером: раскрываем .file в поток и раскладываем порядком */
   .dossier{flex-direction:column;gap:9px;padding:16px;text-align:center}
   .file{display:contents}
   .stamp{order:1;align-self:center;margin-bottom:0}
-  .poster{order:2;height:min(260px,54vw)}
+  .poster{order:2;height:min(300px,60vw)}
   .chnum{order:3;margin-bottom:0}
   .ttl{order:4;font-size:17px;margin:2px 0 4px}
   .rows{order:5;width:100%;max-width:320px}
@@ -517,8 +521,8 @@ body.scanning .snr i:nth-child(4),body.scanning .snr i:nth-child(5){animation-du
         <button class="on" data-p="new">НОВЫЕ <small>без моих</small></button>
         <button data-p="mine">МОИ <small>коллекция</small></button>
       </div></div>
-    <div class="cell"><h4>СИГНАЛ / ШУМ</h4><div class="snr" id="snr"><i></i><i></i><i></i><i></i><i></i></div></div>
-    <div class="cell opc"><h4>ОПЕРАТОР · СМЕНА A03</h4>
+    <div class="cell sigc"><h4>СИГНАЛ / ШУМ</h4><div class="snr" id="snr"><i></i><i></i><i></i><i></i><i></i></div></div>
+    <div class="cell opc"><h4>ОПЕРАТОР<span class="sh"> · СМЕНА A03</span></h4>
       <div class="oper" id="oper" data-st="idle">
         <svg viewBox="0 0 64 74" class="opsvg">
           <text class="opsym" id="opsym" x="32" y="9" text-anchor="middle">◦</text>
@@ -540,7 +544,6 @@ body.scanning .snr i:nth-child(4),body.scanning .snr i:nth-child(5){animation-du
         </svg>
         <div class="opline" id="opline">НА СВЯЗИ</div>
       </div></div>
-    <div class="cell logc"><h4>ЖУРНАЛ</h4><div class="log" id="log">СИСТЕМА ГОТОВА_</div></div>
   </aside>
 
   <section class="ctrl">
@@ -658,7 +661,7 @@ function sweep(){if(!soundOn)return;try{ac=ac||new(AudioContext||webkitAudioCont
 
 /* ═══ ТЕЛЕМЕТРИЯ ═══ */
 const logEl=$('log');let t0s=Date.now();
-function log(s){logEl.innerHTML=(logEl.innerHTML.split('<br>').slice(-3).join('<br>')+'<br>'+s).replace(/^<br>/,'')}
+function log(s){if(!logEl)return;logEl.innerHTML=(logEl.innerHTML.split('<br>').slice(-3).join('<br>')+'<br>'+s).replace(/^<br>/,'')}
 setInterval(()=>{const s=Math.floor((Date.now()-t0s)/1000);
   $('upt').textContent=[s/3600,s/60%60,s%60].map(n=>String(Math.floor(n)).padStart(2,'0')).join(':')},1000);
 function setPh(c){document.documentElement.style.setProperty('--ph',c)}
