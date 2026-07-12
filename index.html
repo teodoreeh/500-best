@@ -158,11 +158,9 @@ body{background:var(--bg);color:var(--ink);font-family:var(--mono);overflow-x:hi
 .orb .o2{stroke-dasharray:2 5;opacity:.7}
 .gO,.gLat{fill:none;stroke:var(--cyan);opacity:.3;stroke-width:1}
 .gMer{fill:none;stroke:var(--cyan);opacity:.5;stroke-width:1;transition:stroke .3s}
-.sat{transform-origin:60px 52px;animation:orbit 11s linear infinite reverse}
+.sat{transform-origin:60px 52px}          /* вращение спутника — из JS, с плавным разгоном */
 .orb .dot{fill:var(--gold);filter:drop-shadow(0 0 5px var(--gold))}
-body.scanning .sat{animation-duration:2.6s}
 body.scanning .gO,body.scanning .gLat,body.scanning .gMer{stroke:var(--ph)}
-@keyframes orbit{to{transform:rotate(360deg)}}
 .tgt{opacity:0;transition:opacity .2s}
 .tgt.on{opacity:1}
 .tgt .tring{fill:none;stroke:var(--ph);stroke-width:1.5;filter:drop-shadow(0 0 4px var(--ph));
@@ -195,40 +193,53 @@ body.scanning .snr i:nth-child(4),body.scanning .snr i:nth-child(5){animation-du
 .log{font-size:9.5px;line-height:1.9;letter-spacing:1px;color:var(--dim);min-height:76px}
 .log b{color:var(--ph);font-weight:700}
 
-/* ── ОПЕРАТОР (пиксель-силуэт, реагирует на события) ── */
-.oper{--opc:var(--cyan);position:relative;display:flex;flex-direction:column;align-items:center}
-.opsvg{width:100%;max-width:104px;height:auto;display:block;image-rendering:pixelated;
-  transition:transform .4s cubic-bezier(.2,.8,.3,1.2)}
-.opbob{animation:opbob 3.6s ease-in-out infinite}
-@keyframes opbob{0%,100%{transform:translateY(0)}50%{transform:translateY(-1.4px)}}
-.optorso{fill:#0f1430;stroke:color-mix(in srgb,var(--opc) 40%,var(--line));stroke-width:1}
-.ophead{fill:#151b34;stroke:color-mix(in srgb,var(--opc) 32%,var(--line));stroke-width:1}
-.ophair{fill:#0c1024}.opdark{fill:#0d1226}
-.opvisor{fill:var(--opc);filter:drop-shadow(0 0 4px var(--opc));transition:fill .3s}
-.opband{fill:none;stroke:#2a3352;stroke-width:3}
-.opcan{fill:#0a0d1d;stroke:#2a3352;stroke-width:1}
-.opled{fill:var(--opc);filter:drop-shadow(0 0 4px var(--opc))}
-.opmic{fill:none;stroke:#39406b;stroke-width:1.4}
-.opant{stroke:#39406b;stroke-width:1}
-.opanttip{fill:var(--gold);animation:blink 2.2s steps(2) infinite}
-.oparm{transform-origin:48px 37px;opacity:0;fill:#0f1430;stroke:color-mix(in srgb,var(--opc) 40%,var(--line));stroke-width:1}
-.opsym{fill:var(--opc);font-size:10px;font-weight:800;opacity:0;font-family:var(--mono)}
-.opline{font-size:8px;letter-spacing:2px;color:var(--dim);margin-top:5px;text-align:center;min-height:11px}
-/* состояния */
-.oper[data-st=idle] .opvisor{animation:opflick 5.5s infinite}
-@keyframes opflick{0%,90%,100%{opacity:1}93%{opacity:.25}95%{opacity:1}}
-.oper[data-st=scan] .opsvg{transform:translateY(3px) scale(1.02)}
-.oper[data-st=scan] .opled{animation:oppulse .45s steps(2) infinite}
-@keyframes oppulse{50%{filter:drop-shadow(0 0 10px var(--opc)) brightness(1.6)}}
-.oper[data-st=win] .opsvg{transform:translateY(-2px) scale(1.03)}
-.oper[data-st=win] .opvisor{animation:opflash .5s ease-out}
-@keyframes opflash{0%{filter:drop-shadow(0 0 13px var(--opc)) brightness(2.2)}100%{filter:drop-shadow(0 0 4px var(--opc))}}
+/* ── ОПЕРАТОР (спрайты во весь «экран» ячейки, без рамки/подписей) ── */
+.cell.opc{--opc:var(--cyan);padding:0;overflow:hidden;position:relative;height:150px;background:#05060e;
+  border-color:color-mix(in srgb,var(--opc) 30%,var(--line));box-shadow:0 0 16px -9px var(--opc);
+  transition:border-color .3s,box-shadow .3s}
+.oper{position:absolute;inset:0}
+.opimg{width:100%;height:100%;object-fit:cover;object-position:center 13%;display:block;
+  transition:transform .45s cubic-bezier(.2,.8,.3,1.2)}
+.oplines{position:absolute;inset:0;pointer-events:none;z-index:1;
+  background:repeating-linear-gradient(0deg,rgba(255,255,255,.04) 0 1px,transparent 1px 3px);
+  box-shadow:inset 0 0 30px 9px rgba(5,6,14,.72)}      /* скан-линии + виньетка «в панель» */
+.opsym{position:absolute;top:7px;right:9px;font-family:var(--mono);font-size:15px;font-weight:800;
+  color:var(--opc);text-shadow:0 0 9px var(--opc);opacity:0;z-index:2}
+.opsweep{position:absolute;left:0;right:0;top:-24%;height:18%;z-index:3;pointer-events:none;opacity:0;
+  background:linear-gradient(180deg,transparent,rgba(25,227,227,.30),transparent);mix-blend-mode:screen}
+/* ── состояния и живость оператора ── */
+.oper[data-st=idle] .opimg{animation:opBreath 5s ease-in-out infinite}   /* дыхание в покое */
+@keyframes opBreath{0%,100%{transform:scale(1)}50%{transform:scale(1.016)}}
+.oper[data-st=idle].glance .opimg{object-position:38% 13%;transition:object-position .5s ease}  /* взгляд в сторону */
+.oper.ping .opsweep{animation:opPing .75s ease-in}                        /* редкий «пинг сигнала» */
+@keyframes opPing{0%{top:-24%;opacity:.9}100%{top:112%;opacity:0}}
+.oper[data-st=scan] .opimg{transform:scale(1.05) translateY(2px)}
+/* победа — 3 варианта празднования (выбираются случайно) */
+.oper[data-st=win] .opimg{transform:scale(1.06) translateY(-2px)}
+.oper[data-st=win].w-punch .opimg{animation:opPunch .55s cubic-bezier(.2,.8,.3,1.5)}
+@keyframes opPunch{0%{transform:scale(1.18) translateY(-2px)}55%{transform:scale(1.02) translateY(-2px)}100%{transform:scale(1.06) translateY(-2px)}}
+.oper[data-st=win].w-wobble .opimg{animation:opWobble .6s ease-in-out}
+@keyframes opWobble{0%,100%{transform:scale(1.06) rotate(0)}25%{transform:scale(1.06) rotate(-2.5deg)}75%{transform:scale(1.06) rotate(2.5deg)}}
+.oper[data-st=win].w-bounce .opimg{animation:opBounce .65s cubic-bezier(.3,1.4,.5,1)}
+@keyframes opBounce{0%{transform:translateY(-9px) scale(1.06)}45%{transform:translateY(0) scale(1.06)}65%{transform:translateY(-4px) scale(1.06)}100%{transform:translateY(0) scale(1.06)}}
+.cell.opc:has(.oper[data-st=win]){border-color:var(--opc);box-shadow:0 0 22px -4px var(--opc);animation:opwin .5s}
+@keyframes opwin{0%{filter:brightness(1.6)}100%{filter:brightness(1)}}
 .oper[data-st=win] .opsym{animation:opsympop .9s cubic-bezier(.34,1.56,.64,1)}
-@keyframes opsympop{0%{opacity:0;transform:translateY(4px) scale(.4)}25%{opacity:1;transform:translateY(0) scale(1.25)}72%{opacity:1;transform:translateY(0) scale(1)}100%{opacity:0;transform:translateY(-5px)}}
-.oper.cheer .oparm{opacity:1;animation:oparm .8s cubic-bezier(.34,1.56,.64,1) both}
-@keyframes oparm{0%{transform:rotate(46deg);opacity:0}45%{transform:rotate(-16deg);opacity:1}100%{transform:rotate(-7deg);opacity:1}}
-.oper.nod .opsvg{animation:opnod .5s}
-@keyframes opnod{0%,100%{transform:none}50%{transform:translateY(2.5px)}}
+@keyframes opsympop{0%{opacity:0;transform:translateY(4px) scale(.4)}25%{opacity:1;transform:translateY(0) scale(1.25)}72%{opacity:1;transform:scale(1)}100%{opacity:0;transform:translateY(-6px)}}
+.oper.nod .opimg{animation:opnod .5s}
+@keyframes opnod{0%,100%{transform:none}50%{transform:translateY(3px) scale(1.02)}}
+
+/* ── скругления «кинескоп» (суперэллипс на «экранах», мягче рамки) ── */
+.opimg,.oplines{clip-path:url(#sq)}          /* оператор + мониторы коллекции — squircle */
+.mon .scrn,.strobe img{clip-path:url(#sq)}
+/* постеры и главный экран — прежнее скругление (по просьбе автора) */
+.screenWrap{border-radius:14px}
+.screenWrap::before,.screenWrap::after,.brk i,.brk b{border-radius:6px}   /* уголки следуют кромке */
+.cell{border-radius:14px}
+.strip{border-radius:12px}
+.gauges{border-radius:12px}
+.act{border-radius:14px}
+.roll{border-radius:16px}
 
 /* ── ПАНЕЛЬ УПРАВЛЕНИЯ ───────────────────────────────── */
 .ctrl{grid-area:ctrl;display:flex;align-items:center;gap:12px;flex-wrap:wrap}
@@ -252,6 +263,8 @@ body.scanning .snr i:nth-child(4),body.scanning .snr i:nth-child(5){animation-du
 .act.add{min-width:200px}
 .act.add .pl{color:var(--gold);font-weight:800;font-size:17px;line-height:1;text-shadow:0 0 9px var(--gold)}
 .act.add.done{border-color:var(--gold);background:#171a2e}
+.act.share{gap:6px}
+.act.share:hover:not(:disabled){border-color:var(--violet)}
 
 /* прогресс: сегментные шкалы */
 .gauges{width:100%;display:flex;flex-direction:column;gap:9px;
@@ -273,8 +286,13 @@ body.scanning .snr i:nth-child(4),body.scanning .snr i:nth-child(5){animation-du
   background:linear-gradient(90deg,color-mix(in srgb,var(--cyan) 45%,#0A0D1C),var(--cyan));
   box-shadow:0 0 10px var(--cyan);transition:width .5s cubic-bezier(.2,.7,.3,1)}
 
-/* атрибуция */
-.cred{grid-area:cred;margin:4px 6px 2px;text-align:center;font-size:9px;letter-spacing:.5px;color:var(--dim);line-height:1.7}
+/* атрибуция + автор */
+.cred{grid-area:cred;margin:10px 6px 2px;text-align:center;line-height:1.7;
+  border-top:1px solid var(--line);padding-top:12px}
+.cred .about{font-size:11px;letter-spacing:1px;color:var(--dim);margin-bottom:7px}
+.cred .about .star{color:var(--gold);font-weight:800;letter-spacing:1.5px}
+.cred .about a{margin:0 2px}
+.cred .attr{font-size:9px;letter-spacing:.5px;color:var(--dim);opacity:.85}
 .cred a{color:var(--dim);text-decoration:underline;text-underline-offset:2px}
 .cred a:hover{color:var(--cyan)}
 
@@ -408,8 +426,10 @@ body.scanning .snr i:nth-child(4),body.scanning .snr i:nth-child(5){animation-du
 @media (max-width:760px){
   body{padding:10px}
   .console{gap:8px;grid-template-columns:1fr;grid-template-areas:"strip" "rail" "screen" "ctrl" "cred"}
-  .strip{padding:9px 12px;row-gap:9px;column-gap:12px}
-  .strip .wm{font-size:10px;line-height:1.5}
+  .strip{padding:9px 12px;gap:10px}
+  .strip .wm{font-size:10px}
+  .strip .wm .mvw{display:none}             /* «MOVIES» прячем — маркиза короче */
+  .strip .tag{display:none}                 /* часы сеанса прячем — шапка в одну строку */
   .rail{flex-direction:row;gap:8px;align-items:stretch}
   .cell{flex:1;min-width:0;display:flex;flex-direction:column;padding:8px 9px}
   .cell h4{flex:none;font-size:8px;margin-bottom:5px}
@@ -418,16 +438,14 @@ body.scanning .snr i:nth-child(4),body.scanning .snr i:nth-child(5){animation-du
   .seg3{gap:4px}
   .seg3 button{font-size:9px;padding:4px 6px}
   .seg3 button small{display:none}
-  .opc .sh{display:none}
-  .opc h4{font-size:8px}
-  .opc .opsvg{max-width:60px}
+  .cell.opc{height:auto;aspect-ratio:1/1}   /* оператор — квадрат в ряду рейки */
   .opc .opline{font-size:7px;letter-spacing:1px;margin-top:2px}
-  .screenWrap{min-height:clamp(430px,59dvh,600px)}
+  .screenWrap{min-height:clamp(440px,65dvh,640px)}
   /* бейдж над постером: раскрываем .file в поток и раскладываем порядком */
   .dossier{flex-direction:column;gap:9px;padding:16px;text-align:center}
   .file{display:contents}
   .stamp{order:1;align-self:center;margin-bottom:0}
-  .poster{order:2;height:min(300px,60vw)}
+  .poster{order:2;height:min(330px,64vw)}
   .chnum{order:3;margin-bottom:0}
   .ttl{order:4;font-size:17px;margin:2px 0 4px}
   .rows{order:5;width:100%;max-width:320px}
@@ -437,6 +455,8 @@ body.scanning .snr i:nth-child(4),body.scanning .snr i:nth-child(5){animation-du
   .roll{flex:1 1 100%;min-width:0;padding:14px 20px;font-size:16px;letter-spacing:4px}
   .act{flex:1;min-width:0;padding:12px 6px;font-size:11px}
   .act.add{min-width:0}
+  .act.share{flex:none;padding:12px 15px;font-size:15px}
+  .act.share .shlbl{display:none}
   .gauges{padding:10px 12px;gap:7px}
   .g label{width:52px}
   .arch{padding:10px}
@@ -448,13 +468,16 @@ body.scanning .snr i:nth-child(4),body.scanning .snr i:nth-child(5){animation-du
 </head>
 <body>
 <canvas id="stars"></canvas>
+<svg width="0" height="0" style="position:absolute" aria-hidden="true"><defs>
+  <clipPath id="sq" clipPathUnits="objectBoundingBox"><path d="M.5,0 C.78,0 .87,0 .935,.065 C1,.13 1,.22 1,.5 C1,.78 1,.87 .935,.935 C.87,1 .78,1 .5,1 C.22,1 .13,1 .065,.935 C0,.87 0,.78 0,.5 C0,.22 0,.13 .065,.065 C.13,0 .22,0 .5,0 Z"/></clipPath>
+</defs></svg>
 <main class="console" id="cab">
 
   <div class="strip">
-    <div class="wm">500 BEST MOVIES</div>
+    <div class="wm">500 BEST<span class="mvw"> MOVIES</span></div>
     <div class="grow"></div>
     <div class="ic">
-      <button id="openCol" class="archbtn" title="Архив записей">◈ АРХИВ</button>
+      <button id="openCol" class="archbtn" title="Коллекция">◈ КОЛЛЕКЦИЯ</button>
       <button id="sound" class="on" title="Звук">♪</button>
       <button id="openSync" title="Синхронизация" hidden>⇄</button>
     </div>
@@ -522,27 +545,10 @@ body.scanning .snr i:nth-child(4),body.scanning .snr i:nth-child(5){animation-du
         <button data-p="mine">МОИ <small>коллекция</small></button>
       </div></div>
     <div class="cell sigc"><h4>СИГНАЛ / ШУМ</h4><div class="snr" id="snr"><i></i><i></i><i></i><i></i><i></i></div></div>
-    <div class="cell opc"><h4>ОПЕРАТОР<span class="sh"> · СМЕНА A03</span></h4>
+    <div class="cell opc">
       <div class="oper" id="oper" data-st="idle">
-        <svg viewBox="0 0 64 74" class="opsvg">
-          <text class="opsym" id="opsym" x="32" y="9" text-anchor="middle">◦</text>
-          <g class="oparm"><rect x="45" y="22" width="6" height="15" rx="2"/><rect x="43" y="17" width="9" height="8" rx="3"/></g>
-          <g class="opbob">
-            <path class="optorso" d="M10 74 L16 50 L48 50 L54 74 Z"/>
-            <rect class="opdark" x="27" y="43" width="10" height="9"/>
-            <rect class="ophead" x="22" y="20" width="20" height="26" rx="5"/>
-            <path class="ophair" d="M21 27 Q20 14 32 13 Q44 14 43 27 L43 21 Q39 17 32 17 Q25 17 21 21 Z"/>
-            <rect class="opvisor" id="opvisor" x="25" y="30" width="14" height="4" rx="1"/>
-            <path class="opband" d="M16 31 Q16 11 32 10 Q48 11 48 31"/>
-            <rect class="opcan" x="12" y="27" width="9" height="15" rx="3"/>
-            <rect class="opcan" x="43" y="27" width="9" height="15" rx="3"/>
-            <circle class="opled" cx="16" cy="34" r="2"/><circle class="opled" cx="47" cy="34" r="2"/>
-            <path class="opmic" d="M20 39 Q15 47 26 48"/>
-            <line class="opant" x1="47" y1="26" x2="53" y2="15"/>
-            <circle class="opanttip" cx="53" cy="14" r="1.8"/>
-          </g>
-        </svg>
-        <div class="opline" id="opline">НА СВЯЗИ</div>
+        <img class="opimg" id="opimg" alt="Оператор станции" src="sprites/op-idle.jpg">
+        <span class="oplines"></span><span class="opsweep"></span><span class="opsym" id="opsym"></span>
       </div></div>
   </aside>
 
@@ -564,12 +570,19 @@ body.scanning .snr i:nth-child(4),body.scanning .snr i:nth-child(5){animation-du
     </div>
   </section>
 
-  <footer class="cred">Рейтинг — <a href="https://letterboxd.com/" target="_blank" rel="noopener">Letterboxd</a> · постеры — <a href="https://www.themoviedb.org/" target="_blank" rel="noopener">TMDB</a><br>Использует TMDB API, но не одобрен и не сертифицирован TMDB.</footer>
+  <footer class="cred">
+    <div class="about"><span class="star">ХОЗЯИН ЗВЕЗДЫ ✨</span> — авторский проект Фёдора ·
+      <a href="https://masterofthestar.ru/" target="_blank" rel="noopener">сайт</a> ·
+      <a href="https://t.me/teodoreeh_uts" target="_blank" rel="noopener">Telegram-канал</a></div>
+    <div class="attr">Рейтинг — <a href="https://letterboxd.com/" target="_blank" rel="noopener">Letterboxd</a> ·
+      постеры — <a href="https://www.themoviedb.org/" target="_blank" rel="noopener">TMDB</a>.
+      Использует TMDB API, но не одобрен и не сертифицирован TMDB.</div>
+  </footer>
 </main>
 
 <div class="arch" id="arch">
   <div class="archTop">
-    <div class="attl">АРХИВ</div>
+    <div class="attl">КОЛЛЕКЦИЯ</div>
     <div class="acnt">В ЭФИРЕ <b id="colVal">0</b> / 500</div>
     <div class="grow"></div>
     <div class="wmode" id="wmode">
@@ -673,29 +686,57 @@ function orbTarget(rank){
   g.setAttribute('transform',`translate(${60+46*Math.cos(a)},${52+26.5*Math.sin(a)})`);
   g.classList.remove('on');requestAnimationFrame(()=>g.classList.add('on'));
 }
-/* вращение каркасной сферы (при поиске — быстрее) */
-(function(){const mers=[...document.querySelectorAll('.gMer')];if(!mers.length)return;let ph=0;
-  (function gf(){ph+=document.body.classList.contains('scanning')?.06:.012;
+/* вращение каркасной сферы + спутник по орбитальному кольцу; при поиске — плавный разгон */
+(function(){const mers=[...document.querySelectorAll('.gMer')],dot=document.querySelector('.orb .dot');
+  if(!mers.length)return;let ph=0,sang=0,vel=.9;
+  (function gf(){const fast=document.body.classList.contains('scanning');
+    vel+=((fast?4.4:.9)-vel)*.05;            // плавно разгоняем/тормозим
+    ph+=vel*.014;                            // сфера (меридианы)
+    sang-=vel;const a=sang*Math.PI/180;      // спутник — по эллипсу вокруг сферы (кольцо o1: rx48/ry28)
+    if(dot){const front=Math.sin(a)*.5+.5;   // 1 спереди (низ), 0 сзади (верх)
+      dot.setAttribute('cx',(60+48*Math.cos(a)).toFixed(1));
+      dot.setAttribute('cy',(52+28*Math.sin(a)).toFixed(1));
+      dot.setAttribute('r',(2+1.1*front).toFixed(2));   // глубина: крупнее спереди
+      dot.style.opacity=(.55+.45*front).toFixed(2)}
     mers.forEach((el,i)=>{const c=Math.cos(ph+i*Math.PI/3);
       el.setAttribute('rx',Math.max(.4,+(Math.abs(c)*30).toFixed(2)));
       el.style.opacity=c>0?.55:.22});
     requestAnimationFrame(gf)})()})();
 
-/* ── оператор: реакции на события ── */
-const oper=$('oper');let operTimer=null;
-function operIdle(){oper.dataset.st='idle';oper.classList.remove('cheer');
-  oper.style.setProperty('--opc','var(--cyan)');$('opline').textContent='НА СВЯЗИ'}
-function operScan(){clearTimeout(operTimer);oper.classList.remove('cheer');
-  oper.dataset.st='scan';$('opline').textContent='ПОИСК СИГНАЛА…'}
-function operWin(t){clearTimeout(operTimer);
-  oper.style.setProperty('--opc',TIER[t].ph);
-  $('opsym').textContent=['◦','★','◆'][t];
-  oper.classList.toggle('cheer',t===2);
-  oper.dataset.st='';void oper.offsetWidth;oper.dataset.st='win';
-  $('opline').textContent=['СИГНАЛ ПОЙМАН','ТОП-100 ★','ПОБЕДА · ТОП-10 ◆'][t];
-  operTimer=setTimeout(operIdle,3200)}
-function operNod(){oper.classList.remove('nod');void oper.offsetWidth;oper.classList.add('nod');
-  $('opline').textContent='ЗАПИСАНО ✓';clearTimeout(operTimer);operTimer=setTimeout(operIdle,1600)}
+/* ── оператор: спрайты nano banana, реакции на события ── */
+const oper=$('oper'),opimg=$('opimg'),operCell=oper.closest('.cell');
+const SPR={idle:'sprites/op-idle.jpg',blink:'sprites/op-blink.jpg',scan:'sprites/op-scan.jpg',
+  find:'sprites/op-find.jpg',top100:'sprites/op-top100.jpg',top10:'sprites/op-top10.jpg',record:'sprites/op-record.jpg'};
+Object.values(SPR).forEach(s=>{const i=new Image();i.src=s});          // предзагрузка кадров
+let operTimer=null,blinkTimer=null;
+function opSprite(k){if(SPR[k])opimg.src=SPR[k]}
+function opColor(c){operCell.style.setProperty('--opc',c)}               // цвет тира на ячейку
+function stopBlink(){clearInterval(blinkTimer);blinkTimer=null}
+function startBlink(){stopBlink();blinkTimer=setInterval(()=>{
+  if(oper.dataset.st!=='idle')return;
+  opSprite('blink');setTimeout(()=>{if(oper.dataset.st==='idle')opSprite('idle')},150);
+},3600+Math.random()*2400)}
+const WINV=['w-punch','w-wobble','w-bounce'];
+function operClear(){oper.classList.remove('nod','glance','ping',...WINV)}
+function operIdle(){clearTimeout(operTimer);oper.dataset.st='idle';operClear();
+  opColor('var(--cyan)');opSprite('idle');startBlink()}
+function operScan(){clearTimeout(operTimer);stopBlink();operClear();
+  oper.dataset.st='scan';opColor('var(--cyan)');opSprite('scan')}
+function operWin(t){clearTimeout(operTimer);stopBlink();operClear();
+  opColor(TIER[t].ph);$('opsym').textContent=['◦','★','◆'][t];
+  opSprite(['find','top100','top10'][t]);
+  const v=WINV[Math.floor(Math.random()*WINV.length)];        // случайное празднование
+  oper.dataset.st='';oper.classList.add(v);void oper.offsetWidth;oper.dataset.st='win';
+  operTimer=setTimeout(operIdle,3400)}
+function operNod(){clearTimeout(operTimer);stopBlink();operClear();oper.dataset.st='nod';
+  void oper.offsetWidth;oper.classList.add('nod');
+  opSprite('record');operTimer=setTimeout(operIdle,1700)}
+/* жизнь в покое: изредка взгляд в сторону или «пинг сигнала» (в дополнение к морганию) */
+setInterval(()=>{if(oper.dataset.st!=='idle')return;
+  if(Math.random()<.5){oper.classList.add('glance');setTimeout(()=>oper.classList.remove('glance'),800+Math.random()*700)}
+  else{oper.classList.remove('ping');void oper.offsetWidth;oper.classList.add('ping')}
+},9000+Math.random()*7000);
+startBlink();
 
 /* ═══ ПРОГРЕСС ═══ */
 const SEGS=[['s10',10,1],['s100',20,5]];
@@ -745,7 +786,7 @@ function renderCol(){buildWall()}
 function buildWall(){
   const w=$('wall');w.innerHTML='';wallByRank={};
   const list=wallMode==='mine'?MOVIES.filter(m=>collected.has(m.rank)):MOVIES;
-  if(!list.length){w.innerHTML='<div class="empty" style="grid-column:1/-1">Архив пуст.<br>Поймай первый сигнал — и первый монитор оживёт.</div>';wallCells=[];return}
+  if(!list.length){w.innerHTML='<div class="empty" style="grid-column:1/-1">Коллекция пуста.<br>Поймай первый сигнал — и первый монитор оживёт.</div>';wallCells=[];return}
   const frag=document.createDocumentFragment();
   list.forEach(m=>{
     const d=document.createElement('div');
@@ -897,6 +938,71 @@ function roll(){
 /* ═══ УПРАВЛЕНИЕ ═══ */
 $('roll').onclick=roll;
 $('lb').onclick=()=>{if(current)open('https://letterboxd.com/film/'+current.id+'/','_blank')};
+
+/* ═══ ШЕРИНГ-КАРТОЧКА (canvas → «Поделиться» / скачивание) ═══ */
+const hexA=(h,a)=>{const n=parseInt(h.slice(1),16);return`rgba(${n>>16&255},${n>>8&255},${n&255},${a})`};
+function rr(c,x,y,w,h,r){c.beginPath();c.moveTo(x+r,y);c.arcTo(x+w,y,x+w,y+h,r);c.arcTo(x+w,y+h,x,y+h,r);c.arcTo(x,y+h,x,y,r);c.arcTo(x,y,x+w,y,r);c.closePath()}
+function wrapText(c,text,x,y,maxW,lh){const words=text.split(' ');let line='',yy=y;
+  for(const w of words){const t=line?line+' '+w:w;
+    if(c.measureText(t).width>maxW&&line){c.fillText(line,x,yy);line=w;yy+=lh}else line=t}
+  c.fillText(line,x,yy);return yy}
+function loadImg(src){return new Promise(res=>{const i=new Image();i.onload=()=>res(i);i.onerror=()=>res(null);i.src=src})}
+function drawCard(m,img){
+  const t=tierOf(m.rank),tc=TIER[t].ph,cv=document.createElement('canvas');
+  cv.width=1080;cv.height=1350;const c=cv.getContext('2d');
+  c.fillStyle='#05060E';c.fillRect(0,0,1080,1350);
+  let g=c.createRadialGradient(540,600,80,540,600,780);
+  g.addColorStop(0,hexA(tc,.20));g.addColorStop(1,'rgba(5,6,14,0)');
+  c.fillStyle=g;c.fillRect(0,0,1080,1350);
+  c.fillStyle='rgba(255,255,255,.022)';for(let y=0;y<1350;y+=4)c.fillRect(0,y,1080,1);
+  c.strokeStyle='#1D2547';c.lineWidth=2;c.strokeRect(28,28,1024,1294);
+  c.strokeStyle='#FFC24B';c.lineWidth=5;const L=48;
+  [[46,46,1,1],[1034,46,-1,1],[46,1304,1,-1],[1034,1304,-1,-1]].forEach(([x,y,sx,sy])=>{
+    c.beginPath();c.moveTo(x+sx*L,y);c.lineTo(x,y);c.lineTo(x,y+sy*L);c.stroke()});
+  c.textAlign='center';
+  c.fillStyle='#EAF2FF';c.font='400 44px "Press Start 2P",monospace';c.fillText('500 BEST',540,148);
+  c.fillStyle=tc;c.font='400 20px "Press Start 2P",monospace';c.fillText('M O V I E S',540,192);
+  const pw=440,ph=660,px=320,py=238;
+  c.save();rr(c,px,py,pw,ph,20);c.clip();
+  if(img&&img.naturalWidth)c.drawImage(img,px,py,pw,ph);
+  else{c.fillStyle='#111633';c.fillRect(px,py,pw,ph);c.fillStyle='#6E77A0';
+    c.font='800 96px "JetBrains Mono",monospace';c.fillText('#'+String(m.rank).padStart(3,'0'),540,py+ph/2+34)}
+  c.restore();
+  c.shadowColor=tc;c.shadowBlur=34;c.strokeStyle=tc;c.lineWidth=3;rr(c,px,py,pw,ph,20);c.stroke();c.shadowBlur=0;
+  const badge=['◦ НАЙДЕН СИГНАЛ','★ ТОП-100','◆ ТОП-10 · ПОБЕДА'][t];
+  c.font='800 27px "JetBrains Mono",monospace';
+  const bw=c.measureText(badge).width+60,bx=540-bw/2,by=py+ph+34;
+  c.strokeStyle=tc;c.lineWidth=2;rr(c,bx,by,bw,54,12);c.stroke();
+  c.fillStyle=tc;c.fillText(badge,540,by+36);
+  c.fillStyle='#6E77A0';c.font='700 25px "JetBrains Mono",monospace';
+  c.fillText('КАНАЛ #'+String(m.rank).padStart(3,'0')+' / 500   ·   '+m.year,540,by+114);
+  c.fillStyle='#EAF2FF';c.font='800 44px "JetBrains Mono",monospace';
+  wrapText(c,m.title,540,by+176,940,52);
+  c.fillStyle='#FFC24B';c.font='800 23px "JetBrains Mono",monospace';
+  c.fillText('films.masterofthestar.ru',540,1292);
+  return cv;
+}
+let sharing=false;
+async function shareFilm(m){
+  if(!m||sharing)return;sharing=true;
+  try{try{await document.fonts.ready}catch(e){}
+    const img=await loadImg(posterSrc(m));
+    const cv=drawCard(m,img);
+    const blob=await new Promise(r=>cv.toBlob(r,'image/png'));
+    if(!blob){sharing=false;return}
+    const file=new File([blob],'500best-'+m.id+'.png',{type:'image/png'});
+    if(navigator.canShare&&navigator.canShare({files:[file]})){
+      try{await navigator.share({files:[file],title:'500 BEST',
+        text:'Поймал «'+m.title+'» на 500 BEST · films.masterofthestar.ru'})}
+      catch(e){}
+    }else{
+      const url=URL.createObjectURL(blob),a=document.createElement('a');
+      a.href=url;a.download=file.name;document.body.appendChild(a);a.click();a.remove();
+      setTimeout(()=>URL.revokeObjectURL(url),5000);
+    }
+  }finally{sharing=false}
+}
+/* шеринг-карточка в спячке — UI-кнопки убраны, функции drawCard/shareFilm сохранены на будущее */
 $('add').onclick=()=>{if(!current)return;
   if(collected.has(current.rank)){collected.delete(current.rank);tone(220,.06)}
   else{collected.add(current.rank);tone(880,.06);tone(1175,.14,'square',.05,.06);operNod()}
