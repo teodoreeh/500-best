@@ -426,6 +426,33 @@ body.scanning .snr i:nth-child(4),body.scanning .snr i:nth-child(5){animation-du
 
 :focus-visible{outline:2px solid var(--gold);outline-offset:2px}
 
+/* ── курсор: фосфорный луч CRT — точка со свечением + послесвечение (трейл) ──
+   нативный курсор прячем и рисуем свой в DOM: только так его можно анимировать */
+@media (pointer:fine){
+  *{cursor:none!important}
+  input,textarea{cursor:text!important}          /* в полях ввода оставляем текстовый */
+  .curwrap{--cc:var(--cyan);position:fixed;inset:0;z-index:9999;pointer-events:none;
+    opacity:0;transition:opacity .25s}
+  .curwrap.on{opacity:1}
+  .curwrap.hot{--cc:var(--gold)}                 /* над кликабельным — золото */
+  .ccore,.ctrail{position:absolute;left:0;top:0;will-change:transform;pointer-events:none}
+  /* без transition на background: в Chromium свойство с transition НЕ обновляется
+     при смене var() — фон завис бы на циане (box-shadow без transition менялся корректно) */
+  .ctrail{width:6px;height:6px;margin:-3px 0 0 -3px;border-radius:50%;background:var(--cc);
+    filter:blur(.6px)}
+  .ccore{width:0;height:0}
+  .ccore i{position:absolute;left:0;top:0;width:9px;height:9px;margin:-4.5px 0 0 -4.5px;border-radius:50%;
+    background:var(--cc);
+    box-shadow:0 0 7px var(--cc),0 0 17px color-mix(in srgb,var(--cc) 55%,transparent);
+    animation:curPulse 1.7s ease-in-out infinite}
+  .curwrap.hot .ccore i{animation-duration:.85s}
+  @keyframes curPulse{0%,100%{transform:scale(1)}50%{transform:scale(1.32)}}
+  .ccore .cring{position:absolute;left:0;top:0;width:10px;height:10px;margin:-5px 0 0 -5px;border-radius:50%;
+    border:1.5px solid var(--cc);opacity:0}
+  .ccore .cring.go{animation:curRing .55s ease-out}
+  @keyframes curRing{0%{transform:scale(.4);opacity:.9}100%{transform:scale(5);opacity:0}}
+}
+
 /* ── МОБИЛКА ─────────────────────────────────────────── */
 @media (max-width:760px){
   body{padding:10px}
@@ -628,7 +655,10 @@ const tierOf=r=>r<=10?2:r<=100?1:0;
 const store=(()=>{let ok=true;try{localStorage.setItem('_t','1');localStorage.removeItem('_t')}catch(e){ok=false}
   const mem={};return{get:k=>{try{return ok?localStorage.getItem(k):mem[k]??null}catch(e){return mem[k]??null}},
   set:(k,v)=>{try{ok?localStorage.setItem(k,v):(mem[k]=v)}catch(e){mem[k]=v}}}})();
-let collected=new Set(JSON.parse(store.get('sb.col')||'[]'));
+/* Коллекция хранится по СТАБИЛЬНОМУ id фильма (слаг Letterboxd), а не по рангу:
+   ранги в топ-500 сдвигаются при еженедельном обновлении базы, и #42 завтра — уже другой фильм.
+   sb.col (старый формат, ранги) не трогаем — он остаётся резервной копией. */
+let collected=new Set(JSON.parse(store.get('sb.col2')||'[]'));
 let colAt=+(store.get('sb.colAt')||0);
 let soundOn=store.get('sb.snd')!=='0',current=null,rolling=false,pool='new';
 let POSTER_URL={};
@@ -656,6 +686,33 @@ const posterSrc=m=>POSTER_URL[m.rank]||m.poster||('posters/'+m.id+'.jpg');
       cx.beginPath();cx.moveTo(meteor.x,meteor.y);cx.lineTo(meteor.x+26,meteor.y-17);cx.stroke();
       if(meteor.life<=0||meteor.y>H+20){meteor=null;mNext=t+6000+Math.random()*9000}}
     cx.globalAlpha=1;requestAnimationFrame(frame)})(performance.now());
+})();
+
+/* ═══ КУРСОР: фосфорный луч + послесвечение ═══ */
+(function(){
+  if(!matchMedia('(pointer:fine)').matches)return;              // на тач-устройствах не нужен
+  const N=12;
+  const wrap=document.createElement('div');
+  wrap.className='curwrap';wrap.setAttribute('aria-hidden','true');
+  const dots=[];
+  for(let i=0;i<N;i++){const d=document.createElement('span');d.className='ctrail';wrap.appendChild(d);dots.push(d)}
+  const core=document.createElement('span');core.className='ccore';
+  core.innerHTML='<i></i><b class="cring"></b>';wrap.appendChild(core);
+  const ring=core.querySelector('.cring');
+  document.body.appendChild(wrap);
+  const HOT='button:not(:disabled),a,summary,label,[role=button],.mon:not(.off)';
+  let mx=innerWidth/2,my=innerHeight/2;const hist=[];
+  addEventListener('mousemove',e=>{mx=e.clientX;my=e.clientY;wrap.classList.add('on');
+    wrap.classList.toggle('hot',!!(e.target.closest&&e.target.closest(HOT)))},{passive:true});
+  addEventListener('mouseout',e=>{if(!e.relatedTarget)wrap.classList.remove('on')});   // ушли за окно
+  addEventListener('mousedown',()=>{ring.classList.remove('go');void ring.offsetWidth;ring.classList.add('go')});
+  (function tick(){
+    hist.unshift({x:mx,y:my});if(hist.length>N+2)hist.pop();
+    core.style.transform='translate('+mx+'px,'+my+'px)';
+    for(let i=0;i<N;i++){const p=hist[Math.min(i+1,hist.length-1)];   // хвост лежит по пройденному пути
+      dots[i].style.transform='translate('+p.x+'px,'+p.y+'px) scale('+(1-i/N*.75).toFixed(2)+')';
+      dots[i].style.opacity=((1-i/N)*.45).toFixed(2)}
+    requestAnimationFrame(tick)})();
 })();
 
 /* осциллограмма ожидания */
@@ -761,8 +818,8 @@ const SEGS=[['s10',10,1],['s100',20,5]];
 SEGS.forEach(([id,n])=>{const el=$(id);for(let i=0;i<n;i++){
   const s=document.createElement('i');s.appendChild(document.createElement('b'));el.appendChild(s)}});
 function updateGauges(){
-  const t10=[...collected].filter(r=>r<=10).length,
-        t100=[...collected].filter(r=>r<=100).length,all=collected.size;
+  let t10=0,t100=0,all=0;                       // считаем по актуальным рангам собранных id
+  for(const m of MOVIES)if(collected.has(m.id)){all++;if(m.rank<=100)t100++;if(m.rank<=10)t10++}
   const vals={s10:t10,s100:t100};
   SEGS.forEach(([id,n,per])=>{const v=vals[id];
     [...$(id).children].forEach((seg,i)=>{
@@ -775,20 +832,32 @@ function updateGauges(){
 }
 
 /* ═══ КОЛЛЕКЦИЯ ═══ */
-function touchCol(){colAt=Date.now();store.set('sb.col',JSON.stringify([...collected]));store.set('sb.colAt',String(colAt))}
+function touchCol(){colAt=Date.now();store.set('sb.col2',JSON.stringify([...collected]));store.set('sb.colAt',String(colAt))}
+const idByRank=()=>{const m={};MOVIES.forEach(f=>m[f.rank]=f.id);return m};
+/* приводим любой список (старый — ранги-числа, новый — id-строки) к id */
+function normCol(arr){const br=idByRank();
+  return arr.map(v=>typeof v==='number'?br[v]:v).filter(v=>typeof v==='string'&&v)}
+/* разовая миграция локальной коллекции со старого формата (ранги) на id */
+function migrateCol(){
+  if(store.get('sb.col2')!==null||!MOVIES.length)return;       // уже мигрировано
+  const old=JSON.parse(store.get('sb.col')||'[]');
+  const ids=normCol(old);
+  collected=new Set(ids);store.set('sb.col2',JSON.stringify(ids));
+  if(ids.length)log('КОЛЛЕКЦИЯ → ID: '+ids.length);
+}
 function setAdd(has){$('addIc').textContent=has?'✓':'＋';
   $('addTxt').textContent=has?'В КОЛЛЕКЦИИ':'В КОЛЛЕКЦИЮ';
   $('add').classList.toggle('done',has)}
 function applyCol(){updateGauges();
-  if(current){const has=collected.has(current.rank);setAdd(has);
+  if(current){const has=collected.has(current.id);setAdd(has);
     $('st').textContent=has?'В КОЛЛЕКЦИИ ✓':'НЕ В КОЛЛЕКЦИИ'}
   if($('arch').classList.contains('show'))refreshWall()}
 function esc(s){return s.replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]))}
 
 /* ── АРХИВ: видеостена ── */
-let wallMode='all',wallCells=[],wallByRank={};
+let wallMode='all',wallCells=[],wallById={};
 function paintCell(d,m){
-  const has=collected.has(m.rank),t=tierOf(m.rank),rk=String(m.rank).padStart(3,'0');
+  const has=collected.has(m.id),t=tierOf(m.rank),rk=String(m.rank).padStart(3,'0');
   const done=d.classList.contains('done'),onair=d.classList.contains('onair');
   d.className='mon'+(has?'':' off')+(done?' done':'')+(onair?' onair':'');
   d.dataset.st=has?'1':'0';
@@ -802,15 +871,15 @@ function paintCell(d,m){
 }
 function renderCol(){buildWall()}
 function buildWall(){
-  const w=$('wall');w.innerHTML='';wallByRank={};
-  const list=wallMode==='mine'?MOVIES.filter(m=>collected.has(m.rank)):MOVIES;
+  const w=$('wall');w.innerHTML='';wallById={};
+  const list=wallMode==='mine'?MOVIES.filter(m=>collected.has(m.id)):MOVIES;
   if(!list.length){w.innerHTML='<div class="empty" style="grid-column:1/-1">Коллекция пуста.<br>Поймай первый сигнал — и первый монитор оживёт.</div>';wallCells=[];return}
   const frag=document.createDocumentFragment();
   list.forEach(m=>{
     const d=document.createElement('div');
     paintCell(d,m);
     d.addEventListener('animationend',()=>{d.classList.remove('onair');d.classList.add('done')},{once:true});
-    wallByRank[m.rank]=d;
+    wallById[m.id]=d;
     frag.appendChild(d);
   });
   w.appendChild(frag);
@@ -829,8 +898,8 @@ function buildWall(){
 /* точечное обновление без пересборки (пока архив открыт) */
 function refreshWall(){
   if(wallMode==='mine'){buildWall();return}
-  for(const m of MOVIES){const d=wallByRank[m.rank];if(!d)continue;
-    const has=collected.has(m.rank);
+  for(const m of MOVIES){const d=wallById[m.id];if(!d)continue;
+    const has=collected.has(m.id);
     if(d.dataset.st===(has?'1':'0'))continue;
     paintCell(d,m);d.classList.add('done')}
 }
@@ -889,12 +958,12 @@ function openFilm(m){
         <button class="fbtn" id="fAdd"></button>
       </div>
     </div>`;
-  const paint=()=>{const h=collected.has(m.rank);
+  const paint=()=>{const h=collected.has(m.id);
     $('fAdd').innerHTML=h?'✕ УБРАТЬ ИЗ КОЛЛЕКЦИИ':'<span class="pl">＋</span> В КОЛЛЕКЦИЮ'};
   paint();
   $('fAdd').onclick=()=>{
-    if(collected.has(m.rank)){collected.delete(m.rank);tone(220,.06)}
-    else{collected.add(m.rank);tone(880,.06);tone(1175,.14,'square',.05,.06)}
+    if(collected.has(m.id)){collected.delete(m.id);tone(220,.06)}
+    else{collected.add(m.id);tone(880,.06);tone(1175,.14,'square',.05,.06)}
     touchCol();applyCol();schedulePush();paint()};
   $('fbox').classList.add('show');
 }
@@ -915,16 +984,16 @@ function reveal(m,daily){
   const d=$('dos');d.classList.remove('on');void d.offsetWidth;d.classList.add('on');
   (t===2?['r1','r2','r3']:['r1','r2']).forEach((id,i)=>{const r=$(id);r.classList.remove('go');void r.offsetWidth;
     setTimeout(()=>r.classList.add('go'),i*140)});
-  $('lb').disabled=false;$('add').disabled=false;setAdd(collected.has(m.rank));
-  $('st').textContent=collected.has(m.rank)?'В КОЛЛЕКЦИИ ✓':'НЕ В КОЛЛЕКЦИИ';
+  $('lb').disabled=false;$('add').disabled=false;setAdd(collected.has(m.id));
+  $('st').textContent=collected.has(m.id)?'В КОЛЛЕКЦИИ ✓':'НЕ В КОЛЛЕКЦИИ';
   log((daily?'ЭФИР ДНЯ ':'ЗАХВАТ ')+'<b>#'+String(m.rank).padStart(3,'0')+'</b> ✓');
   cfg.snd();
   if(daily)operGreet();                                    // «фильм дня» — приветствие
-  else if(collected.has(m.rank))operSurprise();            // уже в коллекции — удивление
+  else if(collected.has(m.id))operSurprise();              // уже в коллекции — удивление
   else operWin(t);                                         // новый — победа по тиру
 }
-const poolMovies=()=>pool==='new'?MOVIES.filter(m=>!collected.has(m.rank))
-  :pool==='mine'?MOVIES.filter(m=>collected.has(m.rank)):MOVIES;
+const poolMovies=()=>pool==='new'?MOVIES.filter(m=>!collected.has(m.id))
+  :pool==='mine'?MOVIES.filter(m=>collected.has(m.id)):MOVIES;
 
 function roll(){
   if(rolling||!MOVIES.length)return;
@@ -1025,8 +1094,8 @@ async function shareFilm(m){
 }
 /* шеринг-карточка в спячке — UI-кнопки убраны, функции drawCard/shareFilm сохранены на будущее */
 $('add').onclick=()=>{if(!current)return;
-  if(collected.has(current.rank)){collected.delete(current.rank);tone(220,.06)}
-  else{collected.add(current.rank);tone(880,.06);tone(1175,.14,'square',.05,.06);operNod()}
+  if(collected.has(current.id)){collected.delete(current.id);tone(220,.06)}
+  else{collected.add(current.id);tone(880,.06);tone(1175,.14,'square',.05,.06);operNod()}
   touchCol();applyCol();schedulePush()};
 $('sound').onclick=function(){soundOn=!soundOn;store.set('sb.snd',soundOn?'1':'0');
   this.classList.toggle('on',soundOn);if(soundOn)tone(660,.05)};
@@ -1078,9 +1147,10 @@ async function syncPull(merge){if(!SYNC_API||!syncId)return;
   let rem;try{const r=await fetch(SYNC_API+'/v1/box/'+syncId);if(!r.ok)return;rem=await r.json()}catch(e){return}
   if(!rem||!Array.isArray(rem.collected))return;
   const rAt=+rem.updatedAt||0;
-  if(merge){rem.collected.forEach(n=>collected.add(n));touchCol();applyCol();syncPush()}
-  else if(rAt>colAt){collected=new Set(rem.collected);colAt=rAt;
-    store.set('sb.col',JSON.stringify([...collected]));store.set('sb.colAt',String(colAt));applyCol()}
+  const remCol=normCol(rem.collected);          // облако могло хранить старый формат (ранги)
+  if(merge){remCol.forEach(n=>collected.add(n));touchCol();applyCol();syncPush()}
+  else if(rAt>colAt){collected=new Set(remCol);colAt=rAt;
+    store.set('sb.col2',JSON.stringify([...collected]));store.set('sb.colAt',String(colAt));applyCol()}
   else if(colAt>rAt){syncPush()}}
 function renderSync(){const b=$('syncBody');
   if(!SYNC_API){b.innerHTML='<div class="empty">Синхронизация не настроена.</div>';return}
@@ -1121,6 +1191,7 @@ updateGauges();
     Promise.race([loadData().catch(()=>{}),wait(2500)]),
     wait(900)
   ]);
+  migrateCol();updateGauges();                      // ранги → id (разово), затем пересчёт шкал
   const s=new Date().toISOString().slice(0,10).split('-').reduce((a,b)=>a+ +b,0);
   reveal(MOVIES[s%MOVIES.length],true);              // «фильм дня» детерминированно по дате
   if(SYNC_API){
