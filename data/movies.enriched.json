@@ -2417,7 +2417,8 @@
     "genres": [
       "Horror",
       "Drama",
-      "Crime"
+      "Crime",
+      "Comedy"
     ],
     "runtime": 101,
     "country": "XC"
@@ -2604,7 +2605,6 @@
     "tmdbId": 36095,
     "genres": [
       "Crime",
-      "Thriller",
       "Horror",
       "Mystery"
     ],
@@ -4711,7 +4711,8 @@
     "poster": "posters/the-straight-story.jpg",
     "tmdbId": 404,
     "genres": [
-      "Drama"
+      "Drama",
+      "Adventure"
     ],
     "runtime": 112,
     "country": "US"
